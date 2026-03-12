@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compliance Assistant</title>
+<style>
+  /* ── DARK THEME (default) ── */
+  :root {
+    --bg-primary: #1b1e2b;
+    --bg-secondary: #232738;
+    --bg-tertiary: #2c3045;
+    --bg-input: #272b3e;
+    --text-primary: #e2e4ea;
+    --text-secondary: #9499ad;
+    --text-muted: #6b7084;
+    --accent: #7b93ff;
+    --accent-hover: #96abff;
+    --accent-dim: rgba(123, 147, 255, 0.12);
+    --border: #333850;
+    --border-light: #3d4260;
+    --user-bubble: #333a54;
+    --assistant-bubble: #272b3e;
+    --danger: #ff7070;
+    --success: #5bd4c4;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  /* ── LIGHT THEME ── */
+  .light {
+    --bg-primary: #f4f5f9;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #e8eaf2;
+    --bg-input: #eef0f6;
+    --text-primary: #1b1e2b;
+    --text-secondary: #5a5f73;
+    --text-muted: #8b90a3;
+    --accent: #5570e8;
+    --accent-hover: #4460d6;
+    --accent-dim: rgba(85, 112, 232, 0.1);
+    --border: #d8dbe6;
+    --border-light: #e2e5ef;
+    --user-bubble: #dde1f0;
+    --assistant-bubble: #ffffff;
+    --danger: #dc5555;
+    --success: #2ea898;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── HEADER ── */
+  .chat-header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .header-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .chat-title {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .chat-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 1px;
+  }
+
+  .header-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn-icon {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-icon:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .btn-clear {
+    padding: 7px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-clear:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  /* ── MESSAGES ── */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .messages::-webkit-scrollbar { width: 6px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .message {
+    display: flex;
+    gap: 10px;
+    max-width: 85%;
+    animation: fadeIn 0.25s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .message.user .message-avatar {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .message.assistant .message-avatar {
+    background: rgba(91, 212, 196, 0.12);
+    color: var(--success);
+  }
+
+  .message-bubble {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    line-height: 1.6;
+    font-size: 14px;
+    word-break: break-word;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .message.user .message-bubble {
+    background: var(--user-bubble);
+    border-bottom-right-radius: 4px;
+    white-space: pre-wrap;
+  }
+
+  .message.assistant .message-bubble {
+    background: var(--assistant-bubble);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+  }
+
+  /* ── MARKDOWN ── */
+  .message-bubble p { margin: 0 0 8px 0; }
+  .message-bubble p:last-child { margin-bottom: 0; }
+  .message-bubble strong { font-weight: 600; color: var(--text-primary); }
+  .message-bubble em { font-style: italic; }
+  .message-bubble h1, .message-bubble h2, .message-bubble h3, .message-bubble h4 {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 14px 0 6px 0;
+    line-height: 1.3;
+  }
+  .message-bubble h1:first-child, .message-bubble h2:first-child,
+  .message-bubble h3:first-child, .message-bubble h4:first-child { margin-top: 0; }
+  .message-bubble h1 { font-size: 17px; }
+  .message-bubble h2 { font-size: 15px; }
+  .message-bubble h3 { font-size: 14px; }
+  .message-bubble h4 { font-size: 14px; color: var(--text-secondary); }
+  .message-bubble ul, .message-bubble ol { margin: 6px 0; padding-left: 20px; }
+  .message-bubble li { margin-bottom: 3px; }
+  .message-bubble li:last-child { margin-bottom: 0; }
+  .message-bubble pre {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 8px 0;
+    overflow-x: auto;
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .message-bubble code.inline {
+    background: var(--bg-tertiary);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 13px;
+  }
+  .message-bubble hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
+  }
+
+  /* ── ERROR ── */
+  .message.error .message-bubble {
+    background: rgba(255, 112, 112, 0.08);
+    border: 1px solid rgba(255, 112, 112, 0.2);
+    color: var(--danger);
+    font-size: 13px;
+  }
+
+  /* ── TYPING ── */
+  .typing-indicator {
+    display: flex;
+    gap: 5px;
+    padding: 4px 0;
+  }
+
+  .typing-indicator span {
+    width: 6px;
+    height: 6px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+  }
+
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typing {
+    0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+    30% { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── WELCOME ── */
+  .welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+    color: var(--text-muted);
+  }
+
+  .welcome-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    font-size: 22px;
+  }
+
+  .welcome h3 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .welcome p {
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 420px;
+  }
+
+  /* ── INPUT ── */
+  .input-area {
+    padding: 14px 24px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .input-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .input-wrapper textarea {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 14px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    min-height: 46px;
+    max-height: 160px;
+    transition: border-color 0.2s, background 0.3s;
+  }
+
+  .input-wrapper textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .input-wrapper textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  .btn-send {
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-send:hover:not(:disabled) {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-send svg {
+    width: 18px;
+    height: 18px;
+  }
+</style>
+</head>
+<body>
+
+<script>
+  // ╔══════════════════════════════════════════════════════════════════╗
+  // ║  НАСТРОЙКИ — отредактируй один раз перед раздачей              ║
+  // ║  Пользователи этот блок не видят и не меняют                   ║
+  // ╚══════════════════════════════════════════════════════════════════╝
+
+  const CONFIG = {
+    // 1. API endpoint твоего сервера
+    endpoint: "https://api.eliza.yandex.net/internal/qwen3-vl-235b/v1/chat/completions",
+
+    // 2. API ключ (оставь пустым, если не нужен)
+    apiKey: "",
+
+    // 3. Название модели
+    model: "qwen3-vl-235b",
+
+    // 4. Temperature (0.0 – 2.0)
+    temperature: 0.7,
+
+    // 5. Заголовок и подзаголовок в шапке чата
+    title: "Compliance Assistant",
+    subtitle: "Помощь по вопросам комплаенса",
+
+    // 6. Текст на стартовом экране
+    welcomeText: "Задайте вопрос по комплаенс-тематике — подарки, пожертвования, спонсорство, антикоррупционные процедуры."
+  };
+</script>
+
+<!--
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  СИСТЕМНЫЙ ПРОМПТ                                               │
+  │  Вставь свой промпт в переменную SYSTEM_PROMPT ниже.            │
+  │  Используй обратные кавычки (`) для многострочного текста.       │
+  └──────────────────────────────────────────────────────────────────┘
+-->
+<script>
+  const SYSTEM_PROMPT = `Ты — ассистент по комплаенс-вопросам. Помогай пользователю с анализом подарков, пожертвований и спонсорских соглашений. Отвечай на русском языке. Не принимай решений за пользователя — предоставляй информацию для самостоятельного решения.`;
+</script>
+
+<!-- CHAT -->
+<div class="chat-header">
+  <div class="header-icon">⚖️</div>
+  <div>
+    <div class="chat-title" id="chatTitle"></div>
+    <div class="chat-subtitle" id="chatSubtitle"></div>
+  </div>
+  <div class="header-actions">
+    <button class="btn-icon" onclick="toggleTheme()" title="Сменить тему">
+      <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+    </button>
+    <button class="btn-clear" onclick="clearChat()">Новый диалог</button>
+  </div>
+</div>
+
+<div class="messages" id="messages" role="log" aria-live="polite">
+  <div class="welcome" id="welcome">
+    <div class="welcome-icon">⚖️</div>
+    <h3 id="welcomeTitle"></h3>
+    <p id="welcomeText"></p>
+  </div>
+</div>
+
+<div class="input-area">
+  <div class="input-wrapper">
+    <textarea id="userInput" placeholder="Введите сообщение..." rows="1" maxlength="4000" aria-label="Поле ввода сообщения" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="btn-send" id="btnSend" onclick="sendMessage()" aria-label="Отправить сообщение">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  // ── STATE ──
+  let conversationHistory = [];
+  let isLoading = false;
+
+  // ── INIT ──
+  document.getElementById('chatTitle').textContent = CONFIG.title;
+  document.getElementById('chatSubtitle').textContent = CONFIG.subtitle;
+  document.getElementById('welcomeTitle').textContent = CONFIG.title;
+  document.getElementById('welcomeText').textContent = CONFIG.welcomeText;
+  document.getElementById('userInput').focus();
+
+  // ── THEME ──
+  const sunIcon = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  const moonIcon = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+
+  function toggleTheme() {
+    const isLight = document.body.classList.toggle('light');
+    document.getElementById('themeIcon').innerHTML = isLight ? moonIcon : sunIcon;
+    // Сохраняем выбор темы (ID-007)
+    try { localStorage.setItem('chat-theme', isLight ? 'light' : 'dark'); } catch(e) {}
+  }
+
+  // Восстанавливаем тему при загрузке (ID-007)
+  try {
+    if (localStorage.getItem('chat-theme') === 'light') {
+      document.body.classList.add('light');
+      document.getElementById('themeIcon').innerHTML = moonIcon;
+    }
+  } catch(e) {}
+
+  // ── AUTO-RESIZE ──
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+  }
+
+  // ── KEYBOARD ──
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  // ── RENDER ──
+  function addMessage(role, content) {
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    const avatarLabel = role === 'user' ? 'Вы' : 'AI';
+    const rendered = role === 'assistant' ? renderMarkdown(content) : escapeHtml(content);
+    div.innerHTML = `
+      <div class="message-avatar">${avatarLabel}</div>
+      <div class="message-bubble">${rendered}</div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function addTypingIndicator() {
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'message assistant';
+    div.id = 'typing';
+    div.innerHTML = `
+      <div class="message-avatar">AI</div>
+      <div class="message-bubble">
+        <div class="typing-indicator"><span></span><span></span><span></span></div>
+      </div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const el = document.getElementById('typing');
+    if (el) el.remove();
+  }
+
+  function addErrorMessage(text) {
+    const container = document.getElementById('messages');
+    const div = document.createElement('div');
+    div.className = 'message error';
+    div.innerHTML = `
+      <div class="message-avatar" style="background:rgba(255,112,112,0.1);color:var(--danger)">!</div>
+      <div class="message-bubble">${escapeHtml(text)}</div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  // ── MARKDOWN ──
+  function renderMarkdown(text) {
+    let html = escapeHtml(text);
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+    html = html.replace(/`([^`]+)`/g, '<code class="inline">$1</code>');
+    html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Сначала нумерованные списки — заменяем с уникальным маркером, чтобы отличить от маркированных (ID-006)
+    html = html.replace(/^\d+\. (.+)$/gm, '<oli>$1</oli>');
+    html = html.replace(/((?:<oli>.*<\/oli>\n?)+)/g, function(match) {
+      return '<ol>' + match.replace(/<\/?oli>/g, function(tag) { return tag.replace('oli', 'li'); }) + '</ol>';
+    });
+    html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+    html = html.replace(/^---$/gm, '<hr>');
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = html.replace(/\n/g, '<br>');
+    html = '<p>' + html + '</p>';
+    html = html.replace(/<p><\/p>/g, '');
+    html = html.replace(/<p>(<h[1-4]>)/g, '$1');
+    html = html.replace(/(<\/h[1-4]>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<pre>)/g, '$1');
+    html = html.replace(/(<\/pre>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<ul>)/g, '$1');
+    html = html.replace(/(<\/ul>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<ol>)/g, '$1');
+    html = html.replace(/(<\/ol>)<\/p>/g, '$1');
+    html = html.replace(/<p>(<hr>)<\/p>/g, '$1');
+    return html;
+  }
+
+  // ── SEND ──
+  async function sendMessage() {
+    if (isLoading) return;
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    addMessage('user', text);
+    conversationHistory.push({ role: 'user', content: text });
+
+    const messages = [];
+    // Системный промпт из JS-переменной (не из DOM)
+    const systemPrompt = (typeof SYSTEM_PROMPT === 'string') ? SYSTEM_PROMPT.trim() : '';
+    if (systemPrompt) {
+      messages.push({ role: 'system', content: systemPrompt });
+    }
+    // Ограничение истории — отправляем только последние 50 сообщений (ID-004)
+    const recentHistory = conversationHistory.slice(-50);
+    messages.push(...recentHistory);
+
+    isLoading = true;
+    document.getElementById('btnSend').disabled = true;
+    addTypingIndicator();
+
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (CONFIG.apiKey) headers['Authorization'] = `Bearer ${CONFIG.apiKey}`;
+
+      // Таймаут 30 секунд — если сервер не ответил, отменяем запрос (ID-003)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const resp = await fetch(CONFIG.endpoint, {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: CONFIG.model,
+          messages: messages,
+          temperature: CONFIG.temperature,
+          stream: false
+        })
+      });
+
+      clearTimeout(timeoutId);
+
+      removeTypingIndicator();
+
+      if (!resp.ok) {
+        addErrorMessage('Ошибка сервера. Попробуйте позже.');
+        conversationHistory.pop();
+        return;
+      }
+
+      const data = await resp.json();
+      const inner = data.response || data;
+      const reply = inner.choices?.[0]?.message?.content;
+
+      if (reply) {
+        addMessage('assistant', reply);
+        conversationHistory.push({ role: 'assistant', content: reply });
+      } else {
+        addErrorMessage('Модель не вернула ответ. Попробуйте переформулировать вопрос.');
+        conversationHistory.pop();
+      }
+
+    } catch (err) {
+      removeTypingIndicator();
+      // Различаем таймаут и сетевую ошибку (ID-003)
+      if (err.name === 'AbortError') {
+        addErrorMessage('Сервер не ответил вовремя. Попробуйте ещё раз.');
+      } else {
+        addErrorMessage('Не удалось связаться с сервером. Проверьте подключение к сети.');
+      }
+      conversationHistory.pop();
+    } finally {
+      isLoading = false;
+      document.getElementById('btnSend').disabled = false;
+      input.focus();
+    }
+  }
+
+  // ── CLEAR ──
+  function clearChat() {
+    conversationHistory = [];
+    document.getElementById('messages').innerHTML = `
+      <div class="welcome" id="welcome">
+        <div class="welcome-icon">⚖️</div>
+        <h3>${escapeHtml(CONFIG.title)}</h3>
+        <p>${escapeHtml(CONFIG.welcomeText)}</p>
+      </div>
+    `;
+  }
+</script>
+
+</body>
+</html>
